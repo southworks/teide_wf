@@ -1,0 +1,10 @@
+{
+  "EnvironmentVariables": [],
+  "ConnectionReferences": [
+    {
+      "LogicalName": "cre0a_sharedmsnweather_3a794",
+      "ConnectionId": "#{MSNWEATHER}#",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_msnweather"
+    }
+  ]
+}
