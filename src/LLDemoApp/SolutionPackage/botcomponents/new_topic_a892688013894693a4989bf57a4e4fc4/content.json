@@ -1,0 +1,198 @@
+{
+  "intents": [
+    {
+      "triggerQueries": [
+        "wear"
+      ],
+      "dialogId": "new_topic_a892688013894693a4989bf57a4e4fc4",
+      "isTriggeringEnabled": true,
+      "id": "new_topic_a892688013894693a4989bf57a4e4fc4",
+      "displayName": "LL Clothes to Wear",
+      "createdTime": "2022-06-30T18:11:53.400929Z",
+      "updatedTime": "2022-06-30T18:31:13.0769735Z",
+      "createdUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08",
+      "updatedUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08"
+    }
+  ],
+  "dialogs": [
+    {
+      "rootNodeId": "54e542fc-8a64-4a30-b51b-48f3bd8b1031",
+      "messageNodes": [
+        {
+          "botMessageId": "381b90c8-4214-4c8b-9842-8d6454360cf6",
+          "nodeType": "BotMessageNode",
+          "id": "64d9fd81-7184-4ece-baa2-599d35ab95be",
+          "defaultTargetNodeId": "e886947c-81a1-471c-a2db-a734db66c7bf"
+        }
+      ],
+      "actionNodes": [
+        {
+          "contextVariableId": "24e1b3e4-1bf0-4da1-bff2-170ed752fc8b",
+          "nodeType": "ActionNode",
+          "inputParameterVariableIdMap": {
+            "text": "{5d35e78d-7bc5-4029-9bbc-72ceaece4d71}"
+          },
+          "outputExpressionVariableIds": [
+            "65e460e5-9de7-42a4-b4c0-0485973d2937"
+          ],
+          "id": "2bf14ee0-bbbf-4d5a-8ba1-cf4cf8e4788c",
+          "defaultTargetNodeId": "64d9fd81-7184-4ece-baa2-599d35ab95be"
+        }
+      ],
+      "dialogChangeNodes": [
+        {
+          "targetDialogId": "new_topic_983742e9ac034ebf811fb3a91967ef89_aeabea4d071f415c8c107e1cb7af5424_assumedsuccess",
+          "nodeType": "DialogChangeNode",
+          "id": "e886947c-81a1-471c-a2db-a734db66c7bf"
+        }
+      ],
+      "questionNodes": [
+        {
+          "contextVariableId": "5d35e78d-7bc5-4029-9bbc-72ceaece4d71",
+          "nodeType": "QuestionNode",
+          "id": "54e542fc-8a64-4a30-b51b-48f3bd8b1031",
+          "defaultTargetNodeId": "2bf14ee0-bbbf-4d5a-8ba1-cf4cf8e4788c"
+        }
+      ],
+      "id": "new_topic_a892688013894693a4989bf57a4e4fc4",
+      "displayName": "Untitled",
+      "createdTime": "2022-06-30T18:11:53.400929Z",
+      "updatedTime": "2022-06-30T18:31:13.0769735Z",
+      "createdUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08",
+      "updatedUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08"
+    }
+  ],
+  "botMessages": [
+    {
+      "channelContent": {
+        "web": {
+          "contentFormat": "Markdown",
+          "content": "Tell me the ZipCode of your location"
+        }
+      },
+      "id": "b5a5d2c0-bb76-4a1a-ba52-013bd18bb6d7",
+      "createdTime": "2022-06-30T18:06:59.727Z",
+      "updatedTime": "2022-06-30T18:06:59.727Z",
+      "createdUserId": "user-0",
+      "updatedUserId": "user-0"
+    },
+    {
+      "channelContent": {
+        "web": {
+          "contentFormat": "Markdown",
+          "content": "The weather right now in {5d35e78d-7bc5-4029-9bbc-72ceaece4d71} is {65e460e5-9de7-42a4-b4c0-0485973d2937}F"
+        }
+      },
+      "id": "381b90c8-4214-4c8b-9842-8d6454360cf6",
+      "createdTime": "2022-06-30T18:06:22.641Z",
+      "updatedTime": "2022-06-30T18:06:22.641Z"
+    }
+  ],
+  "actionDefinitions": [
+    {
+      "timeoutInSeconds": 60,
+      "retryCount": 1,
+      "method": 2,
+      "headers": {
+        "accept": "application/json"
+      },
+      "bodyContent": "{\"text\":\"{5d35e78d-7bc5-4029-9bbc-72ceaece4d71}\"}",
+      "actionType": "Flow",
+      "flowMetadata": {
+        "id": "87f9fdb3-a2f8-ec11-bb3d-0022480917bb",
+        "title": "LL Demo Weather Flow",
+        "description": "Call this flow from Power Virtual Agents.",
+        "httpMethod": 2,
+        "inputParameters": [
+          {
+            "name": "ZipCode",
+            "id": "text",
+            "type": "String",
+            "optional": false
+          }
+        ],
+        "outputParameters": [
+          {
+            "name": "Temp",
+            "id": "temp",
+            "type": "String",
+            "optional": true
+          }
+        ],
+        "outputSchemaType": "Json",
+        "createdTime": "2022-06-30T18:30:29Z",
+        "isEnabled": true,
+        "lastModifiedTime": "2022-06-30T18:30:33Z",
+        "versionNumber": 1495396
+      },
+      "id": "ffc949b8-f0fa-4382-8fa5-a1fe3dcae8b1",
+      "displayName": "LL Demo Weather Flow",
+      "description": "Call this flow from Power Virtual Agents.",
+      "createdTime": "2022-06-30T18:30:56.299Z",
+      "updatedTime": "2022-06-30T18:30:56.299Z"
+    }
+  ],
+  "contextVariables": [
+    {
+      "systemType": "None",
+      "initializerType": "UserQuestion",
+      "scope": "Dialog",
+      "greedySlotFillingEnabled": true,
+      "isInput": false,
+      "externalInitializationAllowed": false,
+      "messages": {
+        "GetValue": [
+          "b5a5d2c0-bb76-4a1a-ba52-013bd18bb6d7"
+        ]
+      },
+      "isGlobal": false,
+      "id": "5d35e78d-7bc5-4029-9bbc-72ceaece4d71",
+      "displayName": "ZipCode",
+      "createdTime": "2022-06-30T18:11:53.400929Z",
+      "updatedTime": "2022-06-30T18:31:13.0769735Z",
+      "createdUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08",
+      "updatedUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08"
+    },
+    {
+      "customTypeId": "f8b5d4dd-8055-44be-9891-55e610d95e11",
+      "initializerType": "Action",
+      "scope": "Dialog",
+      "greedySlotFillingEnabled": false,
+      "isInput": false,
+      "externalInitializationAllowed": false,
+      "actionId": "ffc949b8-f0fa-4382-8fa5-a1fe3dcae8b1",
+      "isGlobal": false,
+      "id": "24e1b3e4-1bf0-4da1-bff2-170ed752fc8b",
+      "displayName": "",
+      "createdTime": "2022-06-30T18:30:56.299Z",
+      "updatedTime": "2022-06-30T18:31:13.0769735Z",
+      "createdUserId": "user-0",
+      "updatedUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08"
+    },
+    {
+      "systemType": "String",
+      "initializerType": "Expression",
+      "scope": "Dialog",
+      "greedySlotFillingEnabled": false,
+      "isInput": false,
+      "externalInitializationAllowed": false,
+      "expression": "@parameters('24e1b3e4-1bf0-4da1-bff2-170ed752fc8b')['temp']",
+      "isGlobal": false,
+      "id": "65e460e5-9de7-42a4-b4c0-0485973d2937",
+      "displayName": "Temp",
+      "createdTime": "2022-06-30T18:30:56.3Z",
+      "updatedTime": "2022-06-30T18:31:13.0769735Z",
+      "createdUserId": "user-0",
+      "updatedUserId": "a0260c59-0c7f-46e6-9099-e046eadf6c08"
+    }
+  ],
+  "jsonTypes": [
+    {
+      "customTypeSchema": "Json",
+      "id": "f8b5d4dd-8055-44be-9891-55e610d95e11",
+      "displayName": "Response Json Type for Flow - LL Demo Weather Flow",
+      "createdTime": "2022-06-30T18:30:56.299Z",
+      "updatedTime": "2022-06-30T18:30:56.299Z"
+    }
+  ]
+}
