@@ -1,0 +1,122 @@
+name: pvawf3-delete-and-import-unmanaged-solution
+on:
+  workflow_dispatch:
+    inputs:
+      environment_name:
+        description: "GitHub environment name to get and import the solution"
+        required: true
+        default: "DEV"
+      branch_name:
+        description: "The branch name to import"
+        required: true
+        default: "main"
+env:
+  workflow_scripts_path: .github/workflows/scripts
+
+jobs:
+  execute-pvawf2-sync-from-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: run-pvawf2-sync-from-main
+        id: run-pvawf2-sync-from-main
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              environment_name: '${{ github.event.inputs.environment_name }}',
+              commit_message: 'Merge from main'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'pvawf2-sync-from-main.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-pvawf2-sync-from-main-workflow-status
+        id: check-pvawf2-sync-from-main-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'pvawf2-sync-from-main.yml', ${{ env.workflowRunId }}, 20000)
+
+  check-solution-existence:
+    runs-on: windows-2022
+    needs: execute-pvawf2-sync-from-main
+    environment: ${{ github.event.inputs.environment_name }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: check-solution
+        uses: ./.github/actions/check-solution-existence
+        with:
+          solution_name: ${{ secrets.SOLUTION_NAME }}
+          environment_url: ${{ secrets.ENVIRONMENT_URL }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          client_id: ${{ secrets.CLIENT_ID }}
+          client_secret: ${{ secrets.CLIENT_SECRET }}
+          secrets: ${{ toJSON(secrets) }}
+    outputs:
+      solution_exists: ${{ steps.check-solution.outputs.solution_exists }}
+
+  import-unmanaged-solution:
+    runs-on: ubuntu-latest
+    needs: check-solution-existence
+    environment: ${{ github.event.inputs.environment_name }}
+    if: needs.check-solution-existence.outputs.solution_exists == 'False'
+    steps:
+      - uses: actions/checkout@v2
+      - name: import-unmanaged-solution
+        id: import-unmanaged-solution
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              solution_name: '${{ secrets.SOLUTION_NAME }}',
+              environment_url: '${{ secrets.ENVIRONMENT_URL }}',
+              ref: '${{ github.ref }}'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'import-unmanaged-solution.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-import-unmanaged-solution-workflow-status
+        id: check-import-unmanaged-solution-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'import-unmanaged-solution.yml', ${{ env.workflowRunId }}, 20000)
+
+  delete-and-import-unmanaged-solution:
+    runs-on: ubuntu-latest
+    needs: check-solution-existence
+    environment: ${{ github.event.inputs.environment_name }}
+    if: needs.check-solution-existence.outputs.solution_exists == 'True'
+    steps:
+      - uses: actions/checkout@v2
+      - name: delete-and-import-unmanaged-solution
+        id: delete-and-import-unmanaged-solution
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              solution_name: '${{ secrets.SOLUTION_NAME }}',
+              environment_url: '${{ secrets.ENVIRONMENT_URL }}',
+              ref: '${{ github.ref }}'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'delete-and-import-unmanaged-solution.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-delete-and-import-unmanaged-solution-workflow-status
+        id: check-delete-and-import-unmanaged-solution-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'delete-and-import-unmanaged-solution.yml', ${{ env.workflowRunId }}, 20000)

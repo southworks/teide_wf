@@ -1,0 +1,41 @@
+name: delete-unmanaged-solution-and-components-from-environment
+
+description: delete-unmanaged-solution-and-components-from-environment
+
+inputs:
+  solution_name:
+    description: solution_name
+    required: true
+  environment_url:
+    description: environment_url
+    required: true
+  tenant_id:
+    description: tenant_id
+    required: true
+  client_id:
+    description: client_id
+    required: true
+  client_secret:
+    description: client_secret
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: convert-unmanaged-to-managed
+      uses: ./.github/actions/convert-unmanaged-to-managed
+      with:
+        solution_name: ${{ github.event.inputs.solution_name }}
+        environment_url: ${{ github.event.inputs.environment_url }}
+        tenant_id: ${{ inputs.tenant_id }}
+        client_id: ${{ inputs.client_id }}
+        client_secret: ${{ inputs.client_secret }}
+
+    - name: delete-managed-solution
+      uses: microsoft/powerplatform-actions/delete-solution@latest
+      with:
+        environment-url: ${{ inputs.environment_url}}
+        app-id: ${{ inputs.client_id }}
+        client-secret: ${{ inputs.client_secret }}
+        tenant-id: ${{ inputs.tenant_id }}
+        solution-name: ${{ inputs.solution_name }}

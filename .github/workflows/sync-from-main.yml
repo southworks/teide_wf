@@ -1,0 +1,50 @@
+name: sync-from-main
+on:
+  workflow_dispatch:
+    inputs:
+      from_branch:
+        description: "The ref (branch, commit, tag) that you want to import"
+        required: true
+        default: main
+      to_branch:
+        description: "branch"
+        required: false
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    name: Syncing from main branch
+    steps:
+      - name: merge-with-main
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            try {
+              /*
+                HTTP response status codes
+                --------------------------
+                201: Successfull response
+                204: Already merge response
+                409: Conflict when there is a merge conflict
+                422: Validation failed
+              */
+
+              let merge = await github.rest.repos.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: '${{ github.event.inputs.from_branch }}',
+                base: '${{ github.event.inputs.to_branch }}'
+              })
+              if (merge.status == 201) {
+                console.log('Merge completed successfully')
+              }
+              else {
+                console.log('No changes found to merge')
+              }
+            }
+            catch (err) {
+              if (err.response.status == 409 || err.response.status == 422) {
+                core.setFailed('Merge failed. Error: ' + err.response.data.message)
+              }
+            }

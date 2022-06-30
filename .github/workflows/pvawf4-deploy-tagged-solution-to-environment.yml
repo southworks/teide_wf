@@ -1,0 +1,62 @@
+name: pvawf4-deploy-tagged-solution-to-environment
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        description: "GitHub tag for solution-version to deploy"
+      environment_name:
+        required: true
+        description: "GitHub environment name to deploy the solution"
+        default: PRD
+env:
+  workflow_scripts_path: .github/workflows/scripts
+
+jobs:
+  check-environment-existence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check-env-existence
+        id: check-env-existence
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let res = await github.rest.repos.getAllEnvironments({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            })
+
+            if (res.data.environments.length > 0) {
+              if(!res.data.environments.find(env => env.name === '${{ github.event.inputs.environment_name }}')) {
+                core.setFailed('The environment does not exists!')
+              }
+            }
+
+  trigger-deploy-tagged-solution:
+    runs-on: ubuntu-latest
+    needs: check-environment-existence
+    steps:
+      - uses: actions/checkout@v2
+      - name: deploy-tagged-solution-to-environment
+        id:  deploy-tagged-solution-to-environment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              tag: '${{ github.event.inputs.tag }}',
+              environment: '${{ github.event.inputs.environment_name }}'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'deploy-tagged-solution-to-environment.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-workflow-status
+        id: check-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'deploy-tagged-solution-to-environment.yml', ${{ env.workflowRunId }}, 20000)

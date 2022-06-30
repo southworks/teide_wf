@@ -1,0 +1,43 @@
+# This pipeline gets triggered manually or via an API call.
+# It is a general purpose automation that allows you to delete or "clean up" an unmanaged solution from a Dataverse environment.
+# It is a destructive action and will remove everything in the solution from the environment.
+# If there are dependencies in other solutions on components in the solution you are trying to clean up / delete, the pipeline will fail.
+# You need to clean up dependencies before running this pipeline.
+
+name: delete-unmanaged-solution-and-components-from-environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      solution_name:
+        description: "name of the Solution in Dataverse environment"
+        required: true
+        default: yoursolutionname
+      environment_url:
+        description: "http endpoint of your Dataverse environment"
+        required: true
+        default: "https://[your-env].crm[x].dynamics.com"
+
+jobs:
+  delete-unmanaged-solution-and-components-from-environment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      # Some Dataverse calls in this workflow cannot run async.  Therefore, they will fail
+      # If someone runs more than one workflow against the environment at the same time.
+      # To prevent this, wait for other workflows queued up to finish before continuing      
+      - name: queue-environment
+        id: queue-environment
+        uses: devkeydet/action-environment-queue@v1
+        with:
+          environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+          
+      - name: delete-unmanaged-solution-and-components-from-environment
+        uses: ./.github/actions/delete-unmanaged-solution-and-components-from-environment
+        with:
+          solution_name: ${{ github.event.inputs.solution_name }}
+          environment_url: ${{ github.event.inputs.environment_url }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          client_id: ${{ secrets.CLIENT_ID }}
+          client_secret: ${{ secrets.CLIENT_SECRET }}

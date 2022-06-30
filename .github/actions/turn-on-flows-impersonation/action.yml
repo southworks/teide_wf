@@ -1,0 +1,56 @@
+# THIS IS A WINDOWS ONLY ACTION BECAUSE THE POWERSHELL MODULES USED REQUIRE WINDOWS POWERSHELL
+name: "turn on flows using impersonation"
+
+description: "turn on flows using impersonation"
+
+inputs:
+  environment_url:
+    description: 'URL of Power Platform environment to connect with; e.g. "https://test-env.crm.dynamics.com"'
+    required: true
+  tenant_id:
+    description: "gets subdomain out of subdomain.domain.com"
+    required: true
+  app_id:
+    description: 'The application id to authenticate with. Setting this input makes app_id, tenant_id and client_secret required; specifying alternate "username" credential set of inputs will result in an error.'
+    required: true
+  client_secret:
+    description: "gets subdomain out of subdomain.domain.com"
+    required: true
+  solution_name:
+    description: "name of the solution to turn flows on"
+    required: true
+  secrets:
+    description: "secrets for replace token to find values to populate deployment settings file."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: Firenza/secrets-to-env@v1.1.0
+      with:
+        secrets: ${{ inputs.secrets }}
+
+    - uses: cschleiden/replace-tokens@v1
+      with:
+        files: '["src/${{ inputs.solution_name }}/config/deploymentSettings.json"]'
+
+    - name: Install and cache PowerShell modules
+      id: psmodulecache
+      uses: potatoqualitee/psmodulecache@v4
+      with:
+        modules-to-cache: Microsoft.Xrm.Data.PowerShell, Microsoft.PowerApps.Administration.PowerShell
+        shell: powershell
+
+    - name: turn-on-flows-impersonation
+      shell: powershell # windows, not cross platform pwsh
+      run: |
+        . ${{ github.action_path }}/Enable-Flows.ps1
+        $params = @{
+            tenantId = '${{ inputs.tenant_id }}'
+            clientId = '${{ inputs.app_id }}'
+            clientSecret = '${{ inputs.client_secret }}'
+            environmentUrl = '${{ inputs.environment_url }}'
+            solutionName = '${{ inputs.solution_name }}'
+            deploymentSettingsFile = "src/${{ inputs.solution_name }}/config/deploymentSettings.json"
+        }
+        Enable-Flows @params

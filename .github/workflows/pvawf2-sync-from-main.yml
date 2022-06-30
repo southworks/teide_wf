@@ -1,0 +1,72 @@
+name: pvawf2-sync-from-main
+on:
+  workflow_dispatch:
+    inputs:
+      environment_name:
+        description: "GitHub environment name to get the solution"
+        required: true
+        default: "DEV"
+      commit_message:
+        description: "commit message"
+        required: true
+        default: "default commit message"
+env:
+  workflow_scripts_path: .github/workflows/scripts
+
+jobs:
+  execute-pvawf1-export-unpack-commit-solution-workflow:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment_name }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: run-pvawf1-export-unpack-commit-solution-workflow
+        id: run-pvawf1-export-unpack-commit-solution-workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              environment_name: '${{ github.event.inputs.environment_name }}',
+              commit_message: '${{ github.event.inputs.commit_message }}'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'pvawf1-export-unpack-commit-solution-workflow.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-pvawf1-export-unpack-commit-solution-workflow-status
+        id: check-pvawf1-export-unpack-commit-solution-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'pvawf1-export-unpack-commit-solution-workflow.yml', ${{ env.workflowRunId }}, 20000)
+
+  sync-from-main-branch:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment_name }}
+    needs: execute-pvawf1-export-unpack-commit-solution-workflow
+    steps:
+      - uses: actions/checkout@v2
+      - name: sync-from-main
+        id: sync-from-main
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.WORKFLOW_DISPATCH_TOKEN}}
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            let ref = '${{ github.ref }}'
+            let params = {
+              from_branch: '${{ secrets.SOURCE_BRANCH }}',
+              to_branch: '${{ secrets.BRANCH_TO_CREATE }}'
+            }
+            let id = await helper.dispatchWorkflow(github, context, 'sync-from-main.yml', ref, params)
+            core.exportVariable('workflowRunId', id)
+
+      - name: check-sync-from-main-workflow-status
+        id: check-sync-from-main-workflow-status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let helper = require('${{ env.workflow_scripts_path }}/js/githubHelper.js')
+            await helper.checkWorkflowStatus(github, context, core, 'sync-from-main.yml', ${{ env.workflowRunId }}, 20000)

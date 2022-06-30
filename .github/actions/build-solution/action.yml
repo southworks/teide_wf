@@ -1,0 +1,98 @@
+name: build-solution
+
+description: build-solution
+
+inputs:
+  ref:
+    required: true
+    description: ref
+  solution_name:
+    required: true
+    description: solution_name
+  dev_build:
+    required: false
+    description: dev_build
+  solution_package_source:
+    required: true
+    description: solution_package_source
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ inputs.ref }}
+
+    # set environment and build number as output variables for further use
+    - id: set-build-number
+      name: set-build-number
+      if: ${{ inputs.dev_build != 'true'}}
+      shell: pwsh
+      run: |
+        $versionXmlMatch = '<Version>[\s\S]*?<\/Version>'
+        $solutionXmlPath = "${{ inputs.solution_package_source }}/Other/Solution.xml"
+        
+        $solutionXml = Get-Content $solutionXmlPath
+        $versionArray = ($solutionXml -match $versionXmlMatch).Trim().Replace('<Version>','').Replace('</Version>','').Split('.') 
+        $major = $versionArray[0]
+        $minor = $versionArray[1]        
+
+        $dateStamp = Get-Date -Format "yyyyMMdd"
+        $buildNumber = "$major.$minor.$dateStamp.${{ github.run_number }}"
+        $solutionXml -replace $versionXmlMatch,"<Version>$buildNumber</Version>" |
+        Out-File $solutionXmlPath
+        
+        echo "::set-output name=buildNumber::$buildNumber"
+
+    - name: create-tag
+      uses: actions/github-script@v3
+      if: ${{ inputs.ref == 'refs/heads/main' && inputs.dev_build != 'true' }}
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          github.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: "refs/tags/${{ inputs.solution_name }}-${{ steps.set-build-number.outputs.buildNumber }}",
+            sha: context.sha
+          })
+
+    - name: Flatten JSON files
+      shell: pwsh
+      run: |
+        #When we unpack the solution files, we format Power Automate json files, but it causes solution import failures so we need to flatten the files
+        Get-ChildItem -Path "${{ inputs.solution_package_source }}/Workflows" -Recurse -Filter *.json |
+        ForEach-Object {
+            $fileContent = (Get-Content $_.FullName) -join ' '
+            if(-not [string]::IsNullOrWhiteSpace($fileContent)) {
+                Set-Content $_.FullName $fileContent
+            }
+        }
+
+    # Until canvas pack is supported through GitHub Actions for Power Platform we need to use pac directly.
+    # So we set the path to pac that ships with the Actions
+    - name: set-pac-path
+      uses: ./.github/actions/set-pac-path
+
+    - name: pack msapp files
+      shell: pwsh
+      run: |
+        Get-ChildItem -Path "${{ inputs.solution_package_source }}/CanvasApps" -Recurse -Filter *_src | 
+        ForEach-Object {     
+          $unpackedPath = $_.FullName
+          $packedFileName = $unpackedPath.Replace("_msapp_src", ".msapp")
+          pac canvas pack --sources $unpackedPath --msapp $packedFileName
+          Remove-Item -Path $unpackedPath -Recurse
+        }
+
+    - name: pack solution
+      uses: microsoft/powerplatform-actions/pack-solution@latest
+      with:
+        solution-folder: ${{ inputs.solution_package_source }}
+        solution-file: ${{ runner.temp }}/${{ inputs.solution_name }}/${{ inputs.solution_name }}_${{ steps.set-build-number.outputs.buildNumber }}.zip
+        solution-type: Both
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: artifact
+        path: ${{ runner.temp }}/${{ inputs.solution_name }}

@@ -1,0 +1,100 @@
+name: import-unmanaged-solution
+
+on:
+  workflow_dispatch:
+    inputs:
+      solution_name:
+        description: "name of the Solution in Dataverse environment"
+        required: true
+        default: yoursolutionname
+      environment_url:
+        description: "http endpoint of your Dataverse environment"
+        required: true
+        default: "https://[your-env].crm[x].dynamics.com"
+      ref:
+        description: "the ref (branch, commit, tag) you want to import"
+        required: true
+        default: "main"
+
+jobs:
+  # Needs it's own job in order for build-deploy-solution->environment value to be used.
+  get-environment-from-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: get-subdomain
+        uses: ./.github/actions/get-subdomain
+        with:
+          url: ${{ github.event.inputs.environment_url }}
+    outputs:
+      subdomain: ${{ steps.get-subdomain.outputs.subdomain }}
+
+  build-deploy-solution:
+    runs-on: ubuntu-latest
+    needs: get-environment-from-domain
+    environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+    steps:
+      - uses: actions/checkout@v2
+
+      # Some Dataverse calls in this workflow cannot run async.  Therefore, they will fail
+      # If someone runs more than one workflow against the environment at the same time.
+      # To prevent this, wait for other workflows queued up to finish before continuing
+      - name: queue-environment
+        id: queue-environment
+        uses: devkeydet/action-environment-queue@v1
+        with:
+          environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+
+      - name: build-solution
+        uses: ./.github/actions/build-solution
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          solution_name: ${{ github.event.inputs.solution_name }}
+          solution_package_source: "src/${{ github.event.inputs.solution_name }}/SolutionPackage"
+          dev_build: true
+
+      - name: deploy-solution
+        uses: ./.github/actions/deploy-solution
+        with:
+          environment_url: ${{ github.event.inputs.environment_url }}
+          solution_name: ${{  github.event.inputs.solution_name }}
+          environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+          unmanaged: true
+          secrets: ${{ toJSON(secrets) }}
+
+      - name: publish-customizations
+        uses: microsoft/powerplatform-actions/publish-solution@latest
+        with:
+          environment-url: ${{ github.event.inputs.environment_url}}
+          app-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+
+  import-data-turn-on-flows:
+    runs-on: windows-2022
+    needs: [get-environment-from-domain, build-deploy-solution]
+    environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - id: import-configuration-migration-data-if-exists
+        name: import-configuration-migration-data-if-exists
+        uses: ./.github/actions/import-configuration-migration-data-if-exists
+        with:
+          environment_url: ${{ github.event.inputs.environment_url }}
+          solution_name: ${{ github.event.inputs.solution_name }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          app_id: ${{ secrets.CLIENT_ID }}
+          client_secret: ${{ secrets.CLIENT_SECRET }}
+          environment: ${{ needs.get-environment-from-domain.outputs.subdomain }}
+
+      - name: turn-on-flows-impersonation
+        id: turn-on-flows-impersonation
+        uses: ./.github/actions/turn-on-flows-impersonation
+        with:
+          environment_url: ${{ github.event.inputs.environment_url }}
+          solution_name: ${{ github.event.inputs.solution_name }}
+          tenant_id: ${{ secrets.TENANT_ID }}
+          app_id: ${{ secrets.CLIENT_ID }}
+          client_secret: ${{ secrets.CLIENT_SECRET }}
+          secrets: ${{ toJSON(secrets) }}

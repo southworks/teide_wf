@@ -1,0 +1,69 @@
+name: determine-solution-build-deploy
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/**
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+
+env:
+  workflow_scripts_path: .github/workflows/scripts
+
+jobs:
+  determine-solution-build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      # determine if the build should go to the PR or UAT environment
+      - name: uat env var
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          echo "environment=uat" >> $GITHUB_ENV
+      - name: pr env var
+        if: github.ref != 'refs/heads/main'
+        shell: bash
+        run: |
+          echo "environment=pr" >> $GITHUB_ENV
+      - id: files
+        uses: jitterbit/get-changed-files@v1
+        with:
+          format: csv
+      # check for file changes in solution source folder(s)
+      # if found, queue build and deply workflow
+      - name: dispatch-build-deploy-solution
+        id: dispatch-build-deploy-solution
+        shell: pwsh
+        env:
+          # Workflows cannot be dispatched with the standard GITHUB_TOKEN, so we use a token that can
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_DISPATCH_TOKEN }}
+        run: |
+          . ${{ env.workflow_scripts_path }}/pwsh/Start-Build-Deploy-Solution.ps1
+
+          $params = @{
+              files = '${{ steps.files.outputs.all }}'
+              githubRef = '${{ github.ref }}'
+              prHeadRef = '${{ github.event.pull_request.head.ref }}'
+              githubSha = '${{ github.sha }}'
+              prHeadSha = '${{ github.event.pull_request.head.sha }}'
+              environment = '${{ env.environment }}'
+          }
+
+          Start-Build-Deploy-Solution @params
+
+      - name: create-commit-statuses
+        id: create-commit-statuses
+        if: contains(github.ref, 'pull')
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const createCommitStatuses = require('${{ env.workflow_scripts_path }}/js/createCommitStatuses.js')
+            const solutionNamesString = '${{ steps.dispatch-build-deploy-solution.outputs.solution_names }}'
+            await createCommitStatuses({ github, context, solutionNamesString })
